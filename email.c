@@ -25,11 +25,21 @@ void generate_rand_alphanumeric_string(int size, char* str) {
         }
 }
 
+int send_confirmation_code(char* code, char* destination_email) {
+        char* subject = "Codigo de confirmacao para acesso a ficheiro";
+        char* template = "Codigo de acesso gerado: %s.\nSe nao realizou qualquer pedido, ignore este email.";
+        char message[strlen(template) + strlen(code)];
+
+        sprintf(message,template,code);
+
+        return send_email(message,subject,destination_email);
+}
+
 
 int main() {
         printf("Main start\n");
-        char code[8];
-        generate_rand_alphanumeric_string(7,code);
-        printf("generated code %s\n", code);
+        char code[15];
+        generate_rand_alphanumeric_string(14,code);
+        send_confirmation_code(code, "pauloedgar2@gmail.com");
         printf("Main end\n");
 }
