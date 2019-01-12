@@ -4,11 +4,8 @@
 #include <time.h>
 
 int send_email(char* message, char* subject, char* destination) {
-
         char* template = "echo \"%s\" | mail -s \"%s\" %s";
-
         char command[strlen(template) + strlen(message) + strlen(subject) + strlen(destination)];
-
         sprintf(command, template, message, subject, destination);
 
         return system(command);
@@ -19,7 +16,6 @@ void generate_rand_alphanumeric_string(int size, char* str) {
 
         // Generate seed
         srand(time(NULL));
-
         for (int i = 0; i < size; i++) {
                 str[i] = alphabet[(rand() % ((strlen(alphabet)) - 1)) + 0];
         }
