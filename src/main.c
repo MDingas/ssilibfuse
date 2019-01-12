@@ -4,11 +4,6 @@
 #include <config.h>
 #endif
 
-#ifdef linux
-/* For pread()/pwrite()/utimensat() */
-#define _XOPEN_SOURCE 700
-#endif
-
 #define _XOPEN_SOURCE_EXTENDED 1
 #include <stdlib.h>
 
@@ -38,10 +33,10 @@ static void nfs_fullpath(char fpath[PATH_MAX], const char *path)
 static int nfs_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-    
+
 	res = lstat(fpath, stbuf);
 	if (res == -1)
 		return -errno;
@@ -52,10 +47,10 @@ static int nfs_getattr(const char *path, struct stat *stbuf)
 static int nfs_access(const char *path, int mask)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-    
+
 	res = access(fpath, mask);
 	if (res == -1)
 		return -errno;
@@ -66,7 +61,7 @@ static int nfs_access(const char *path, int mask)
 static int nfs_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -87,13 +82,13 @@ static int nfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 	(void) offset;
 	(void) fi;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
 	dp = opendir(fpath);
     //dp = (DIR *) (uintptr_t) fi->fh;
-    
+
 	if (dp == NULL)
 		return -errno;
 
@@ -113,7 +108,7 @@ static int nfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 static int nfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -136,7 +131,7 @@ static int nfs_mknod(const char *path, mode_t mode, dev_t rdev)
 static int nfs_mkdir(const char *path, mode_t mode)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -150,7 +145,7 @@ static int nfs_mkdir(const char *path, mode_t mode)
 static int nfs_unlink(const char *path)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -164,7 +159,7 @@ static int nfs_unlink(const char *path)
 static int nfs_rmdir(const char *path)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -178,7 +173,7 @@ static int nfs_rmdir(const char *path)
 static int nfs_symlink(const char *path, const char *link)
 {
 	int res;
-    
+
     char flink[PATH_MAX];
     nfs_fullpath(flink, link);
 
@@ -192,15 +187,15 @@ static int nfs_symlink(const char *path, const char *link)
 static int nfs_rename(const char *path, const char *newpath)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     char fnewpath[PATH_MAX];
-    
+
     nfs_fullpath(fpath, path);
     nfs_fullpath(fnewpath, newpath);
-    
+
     res = rename(fpath, fnewpath);
-    
+
 	if (res == -1)
 		return -errno;
 
@@ -212,12 +207,12 @@ static int nfs_link(const char *path, const char *newpath)
 	int res;
     char fpath[PATH_MAX];
     char fnewpath[PATH_MAX];
-    
+
     nfs_fullpath(fpath, path);
     nfs_fullpath(fnewpath, newpath);
 
 	res = link(fpath, fnewpath);
-    
+
 	if (res == -1)
 		return -errno;
 
@@ -227,7 +222,7 @@ static int nfs_link(const char *path, const char *newpath)
 static int nfs_chmod(const char *path, mode_t mode)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -241,7 +236,7 @@ static int nfs_chmod(const char *path, mode_t mode)
 static int nfs_chown(const char *path, uid_t uid, gid_t gid)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -255,10 +250,10 @@ static int nfs_chown(const char *path, uid_t uid, gid_t gid)
 static int nfs_truncate(const char *path, off_t size)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-    
+
 	res = truncate(fpath, size);
 	if (res == -1)
 		return -errno;
@@ -270,7 +265,7 @@ static int nfs_truncate(const char *path, off_t size)
 static int nfs_utimens(const char *path, const struct timespec ts[2])
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -292,7 +287,7 @@ static int nfs_open(const char *path, struct fuse_file_info *fi)
 	if(!authorized){
 		return -errno;
 	}
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -309,7 +304,7 @@ static int nfs_read(const char *path, char *buf, size_t size, off_t offset,
 {
 	int fd;
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -331,7 +326,7 @@ static int nfs_write(const char *path, const char *buf, size_t size,
 {
 	int fd;
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -351,7 +346,7 @@ static int nfs_write(const char *path, const char *buf, size_t size,
 static int nfs_statfs(const char *path, struct statvfs *stbuf)
 {
 	int res;
-    
+
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
 
@@ -399,7 +394,7 @@ static int nfs_fallocate(const char *path, int mode,
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		return -errno;
-    
+
 	res = -posix_fallocate(fd, offset, length);
 
 	close(fd);
@@ -414,7 +409,7 @@ static int nfs_setxattr(const char *path, const char *name, const char *value,
 {
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-   
+
 	int res = lsetxattr(fpath, name, value, size, flags);
 	if (res == -1)
 		return -errno;
@@ -426,7 +421,7 @@ static int nfs_getxattr(const char *path, const char *name, char *value,
 {
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-   
+
 	int res = lgetxattr(fpath, name, value, size);
 	if (res == -1)
 		return -errno;
@@ -437,7 +432,7 @@ static int nfs_listxattr(const char *path, char *list, size_t size)
 {
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-   
+
 	int res = llistxattr(fpath, list, size);
 	if (res == -1)
 		return -errno;
@@ -448,7 +443,7 @@ static int nfs_removexattr(const char *path, const char *name)
 {
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
-   
+
 	int res = lremovexattr(fpath, name);
 	if (res == -1)
 		return -errno;
@@ -497,31 +492,31 @@ int main(int argc, char *argv[])
 
     int fuse_stat;
     struct nfs_state *nfs_data;
-    
+
     if ((getuid() == 0) || (geteuid() == 0)) {
         fprintf(stderr, "Running BBFS as root opens unnacceptable security holes\n");
         return 1;
     }
-    
+
     // See which version of fuse we're running
     fprintf(stderr, "Fuse library version %d.%d\n", FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
-    
+
     if ((argc < 3) || (argv[argc-2][0] == '-') || (argv[argc-1][0] == '-')){
         fprintf(stderr, "usage:  bbfs [FUSE and mount options] rootDir mountPoint\n");
         return 1;
     }
-    
+
     nfs_data = malloc(sizeof(struct nfs_state));
     if (nfs_data == NULL) {
         fprintf(stderr, "Unable to allocate memory\n");
         return 1;
     }
-    
+
     nfs_data->rootdir = realpath(argv[argc-2], NULL);
     argv[argc-2] = argv[argc-1];
     argv[argc-1] = NULL;
     argc--;
-    
+
     // turn over control to fuse
     fprintf(stderr, "about to call fuse_main\n");
     fuse_stat = fuse_main(argc, argv, &nfs_oper, nfs_data);
