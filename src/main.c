@@ -13,6 +13,7 @@
 #include <stdlib.h>
 
 #include <fuse.h>
+#include <locale.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -21,7 +22,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <gtk/gtk.h>
 #include "params.h"
+#include "validation.h"
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
@@ -283,6 +286,12 @@ static int nfs_utimens(const char *path, const struct timespec ts[2])
 static int nfs_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
+
+	fprintf(stderr,"CALL NFS_OPEN\n");
+	int authorized = validate("ssi");
+	if(!authorized){
+		return -errno;
+	}
     
     char fpath[PATH_MAX];
     nfs_fullpath(fpath, path);
@@ -484,6 +493,8 @@ static struct fuse_operations nfs_oper = {
 
 int main(int argc, char *argv[])
 {
+    gtk_init(NULL,NULL);
+
     int fuse_stat;
     struct nfs_state *nfs_data;
     
