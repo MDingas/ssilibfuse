@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
+
+#include "email.h"
 
 int send_email(char* message, char* subject, char* destination) {
         char* template = "echo \"%s\" | mail -s \"%s\" %s";
@@ -9,16 +10,6 @@ int send_email(char* message, char* subject, char* destination) {
         sprintf(command, template, message, subject, destination);
 
         return system(command);
-}
-
-void generate_rand_alphanumeric_string(int size, char* str) {
-        char* alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-        // Generate seed
-        srand(time(NULL));
-        for (int i = 0; i < size; i++) {
-                str[i] = alphabet[(rand() % ((strlen(alphabet)) - 1)) + 0];
-        }
 }
 
 int send_confirmation_code(char* code, char* destination_email) {
@@ -29,13 +20,4 @@ int send_confirmation_code(char* code, char* destination_email) {
         sprintf(message,template,code);
 
         return send_email(message,subject,destination_email);
-}
-
-
-int main() {
-        printf("Main start\n");
-        char code[15];
-        generate_rand_alphanumeric_string(14,code);
-        send_confirmation_code(code, "pauloedgar2@gmail.com");
-        printf("Main end\n");
 }
