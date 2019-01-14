@@ -1,4 +1,4 @@
-#!/usr/local/bin/gawk -f 
+#!/usr/local/bin/gawk -f
 
 BEGIN           {FS=":"}
-uid==$1         {print $2}
+username==$1    {print $2}

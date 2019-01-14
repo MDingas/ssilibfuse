@@ -20,9 +20,9 @@ void generate_rand_alphanumeric_string(int size, char* str) {
 
 char* get_user_email(char* credentials){
         char buffer[BUFFER_SIZE];
-        char* uid = getenv("USER");
-    
-        snprintf(buffer, BUFFER_SIZE,"gawk -f get_email.awk uid=%s %s", uid, credentials);
+        char* username = getenv("USER");
+
+        snprintf(buffer, BUFFER_SIZE,"gawk -f get_email.awk username=%s %s", username, credentials);
 
         FILE* fd = popen(buffer, "r");
         if(fd == NULL) return NULL;
@@ -31,7 +31,7 @@ char* get_user_email(char* credentials){
         pclose(fd);
 
         //Email not found
-        if(n <= 0) return NULL; 
+        if(n <= 0) return NULL;
 
         return strdup(buffer);
 }
