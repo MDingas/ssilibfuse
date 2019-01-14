@@ -5,5 +5,6 @@
 #define TIMEOUT 30
 
 int validate(char*);
+void new_error_window();
 
 #endif
