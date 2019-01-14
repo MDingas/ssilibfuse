@@ -1,6 +1,10 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
 #include "utils.h"
 
 void generate_rand_alphanumeric_string(int size, char* str) {
@@ -13,3 +17,22 @@ void generate_rand_alphanumeric_string(int size, char* str) {
         }
         str[size] = '\0';
 }
+
+char* get_user_email(char* credentials){
+        char buffer[BUFFER_SIZE];
+        char* uid = getenv("USER");
+    
+        snprintf(buffer, BUFFER_SIZE,"gawk -f get_email.awk uid=%s %s", uid, credentials);
+
+        FILE* fd = popen(buffer, "r");
+        if(fd == NULL) return NULL;
+
+        int n = fscanf(fd, "%s",buffer);
+        pclose(fd);
+
+        //Email not found
+        if(n <= 0) return NULL; 
+
+        return strdup(buffer);
+}
+
