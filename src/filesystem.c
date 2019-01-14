@@ -437,11 +437,13 @@ static int nfs_opt_proc(void *data, const char *arg, int key, struct fuse_args *
             exit(0);
             break;
         case KEY_HELP:
-            fprintf(stderr, "Mount a filesystem where sensitive operations are restricted with a 2-way authentication system\n");
-            fprintf(stderr, "usage: authmounter [FUSE OPTIONS] [AUTHMOUNTER PARAMETERS]\n");
+            fprintf(stderr, "usage: authmounter [FUSE OPTIONS] [AUTHMOUNTER OPTIONS] MOUNTPOINT\n");
+            fprintf(stderr, "Mount a filesystem in MOUNTPOINT where sensitive operations are restricted with a 2-way authentication system\n");
             fprintf(stderr, "Fuse options use the '-o' flag\n");
-            fprintf(stderr, "Parameters are OBLIGATORY\n");
-            fprintf(stderr, "Example: authmounter -r rootDir/ -m mountDir/ -c credentials.txt");
+            fprintf(stderr, "\nauthmounter options:\n");
+            fprintf(stderr, "\t -c, --credentials \t Path to directory that contains credencials. Must be list in format «name:email». Default: Specified by input.\n");
+            fprintf(stderr, "\t -r, --root \t\t Root directory of the mount. Default: System root.\n");
+            fprintf(stderr, "Example: authmounter -o nonempty -r rootDir/ -c credentials.txt mountDir\n");
             exit(0);
     }
     return 1;
@@ -453,8 +455,6 @@ static struct fuse_opt nfs_opts[] = {
     FUSE_OPT_KEY("-h",             KEY_HELP),
     FUSE_OPT_KEY("--help",         KEY_HELP),
     NFS_OPT("-o %s",              general_options,0),
-    NFS_OPT("-m %s",              mount_point, 0),
-    NFS_OPT("--mount %s",         mount_point, 0),
     NFS_OPT("-r %s",              root_dir, 0),
     NFS_OPT("--root %s",          root_dir, 0),
     NFS_OPT("-c %s",              credentials_path, 0),
@@ -462,38 +462,51 @@ static struct fuse_opt nfs_opts[] = {
     FUSE_OPT_END
 };
 
-void validate_non_root_usage() {
+void nfs_validate_non_root_usage() {
     if ((getuid() == 0) || (geteuid() == 0)) {
-        fprintf(stderr, "Por razões de segurança é pedido que não seja executado este programa como root.\n");
+        fprintf(stderr, "For security reasons, it's not allowed to execute this as root.\n");
         exit(1);
     }
 }
 
-void validate_argument_usage(struct nfs_config* conf) {
-    if (conf->root_dir == NULL || conf->mount_point == NULL || conf->credentials_path == NULL) {
-        fprintf(stderr, "Must specify root directory, mount directory and path to file with credentials.\nauthmounter -h for help");
-        exit(1);
+void nfs_validate_options(struct nfs_config* conf) {
+    // No root directory specified? By default, system's root
+    if (conf->root_dir == NULL) {
+        printf("No root specified. Assuming \"/\"");
+        conf->root_dir = "/";
     }
-}
 
-void append_mount_point_to_arguments(struct fuse_args args, char* mount_point, char* extended_args[]) {
-    for (int i = 0; i < args.argc; i++) {
-        extended_args[i] = (char *) malloc(strlen(args.argv[i]));
-        strcpy(extended_args[i],args.argv[i]);
+    // Credentials file specifies who to send 2-factor authentication email to.
+    // If none specified, ask for email with a prompt and save in file
+    if (conf->credentials_path == NULL) {
+        printf("Input your email:");
+        char line[250];
+        char* lpointer = line; // Should I retake the imperative programming class?
+        size_t nbytes = 250;
+        int readchars = getline(&lpointer, &nbytes, stdin);
+
+        char filename[PATH_MAX];
+        sprintf(filename,"%s/.authmount_credentials", getenv("HOME"));
+
+        FILE *f = fopen(filename, "w");
+        fprintf(f,"%s:%s\n", getenv("USER") , line);
+        fclose(f);
+
+        conf->credentials_path = "authmount_credentials";
+
+        printf("Credentials saved in ~/.authmount_credentials\n");
     }
-    extended_args[args.argc] = (char *) malloc(strlen(conf.mount_point));
-    strcpy(extended_args[args.argc],conf.mount_point);
 }
 
 int main(int argc, char *argv[]) {
     gtk_init(NULL,NULL);
 
-    validate_non_root_usage();
+    nfs_validate_non_root_usage();
 
     struct nfs_state *nfs_data;
     nfs_data = malloc(sizeof(struct nfs_state));
     if (nfs_data == NULL) {
-        fprintf(stderr, "Nao foi possivel alocar memória.\n");
+        fprintf(stderr, "Unable to allocate memory.\n");
         return 1;
     }
 
@@ -501,18 +514,12 @@ int main(int argc, char *argv[]) {
     memset(&conf, 0, sizeof(conf));
     fuse_opt_parse(&args, &conf, nfs_opts, nfs_opt_proc);
 
-    validate_argument_usage(&conf);
+    nfs_validate_options(&conf);
 
-    printf("Inicializando da root %s em %s, protegido pelas credenciais em %s...\n", conf.root_dir, conf.mount_point, conf.credentials_path);
+    printf("Mounting in %s rooted to %s. Credentials accessible and editable in %s.\n", args.argv[args.argc - 1], conf.root_dir, conf.credentials_path);
 
-    nfs_data->rootdir = realpath(conf.root_dir, NULL);
+    nfs_data->rootdir = realpath(conf.root_dir,NULL);
 
-    // Why do this? the behaviour of "fusermount" is that the mount directory is the
-    // last argument specified, which does not correspond to this code's solution
-    // of specifying it as a flag. As such, we must forcefully append it in as the last
-    // field before calling fuse_main
-    char* extended_args[args.argc + 1];
-    append_mount_point_to_arguments(args, conf.mount_point, extended_args);
-
-    return(fuse_main(args.argc + 1, extended_args, &nfs_oper, nfs_data));
+    printf("Calling main fuse library.\n");
+    return(fuse_main(args.argc, args.argv, &nfs_oper, nfs_data));
 }
