@@ -3,3 +3,5 @@ mounter
 *.swp
 src/mountPoint
 src/rootDir
+authmounter
+a.out
