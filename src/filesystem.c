@@ -275,21 +275,30 @@ static int nfs_open(const char *path, struct fuse_file_info *fi) {
     char email[BUFFER_SIZE];
     get_user_email(conf.credentials_path,email);
     send_confirmation_code(code,email);
-    int authorized = validate(code,email);
-    if(!authorized){
-        new_error_window();
-        return (-EACCES);
-    }
+    int validation_return_code = validate(code,email);
 
     char fpath[PATH_MAX];
-    nfs_fullpath(fpath, path);
 
-    res = open(fpath, fi->flags);
-    if (res == -1)
-        return -errno;
+    switch(validation_return_code) {
+        case VALID_CODE:
+            nfs_fullpath(fpath, path);
 
-    close(res);
-    return 0;
+            res = open(fpath, fi->flags);
+            if (res == -1)
+                return -errno;
+
+            close(res);
+            return 0;
+            break;
+        case TIMEOUT_EXCEEDED:
+            new_alert_window("Timed out (30 seconds)");
+            return (-ETIME);
+            break;
+        case INVALID_CODE:
+            new_alert_window("Access denied.");
+            return (-EACCES);
+            break;
+    }
 }
 
 static int nfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {

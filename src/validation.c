@@ -7,24 +7,12 @@
 
 static GtkWidget *hash_field;
 static GtkWidget *window;
-static char* inserted_hash_code;
 
-long long unsigned initial_time;
-struct timeval t;
+static char* g_inserted_hash_code;
+int g_elapsed_time = 0;
 
-void start(){
-    gettimeofday(&t, NULL);
-    initial_time = t.tv_sec;
-}
-
-long long unsigned stop(){
-    gettimeofday(&t, NULL);
-    long long unsigned final_time = t.tv_sec;
-    return final_time - initial_time;
-}
-
-void do_get_hash(GtkWidget *get_hash, gpointer data) {
-    inserted_hash_code = strdup((char *)gtk_entry_get_text(GTK_ENTRY(hash_field)));
+void on_click_event(GtkWidget *get_hash, gpointer data) {
+    g_inserted_hash_code = strdup((char *)gtk_entry_get_text(GTK_ENTRY(hash_field)));
     gtk_widget_destroy(window);
 }
 
@@ -33,7 +21,7 @@ void on_delete_event(){
     gtk_main_quit();
 }
 
-void new_error_window() {
+void new_alert_window(char* message) {
     GtkWidget *grid, *get_hash, *label;
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -41,8 +29,7 @@ void new_error_window() {
     //g_signal_connect (window, "delete-event", G_CALLBACK (on_delete_event), NULL);
 
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
-    //gtk_window_move (GTK_WINDOW(window),30,60);
+    gtk_window_set_default_size(GTK_WINDOW(window), 800, 800);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     gtk_window_set_title(GTK_WINDOW(window), "Authentication");
 
@@ -50,35 +37,59 @@ void new_error_window() {
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(window), grid);
 
-    label = gtk_label_new("\n\n Access denied.\n\n");
+    size_t needed_bytes = snprintf(NULL, 0, "\n\n     %s    \n\n", message);
+    char* formated_message = (char*) malloc(sizeof(char) * needed_bytes);
+
+    sprintf(formated_message, "\n\n     %s      \n\n", message);
+
+    label = gtk_label_new(formated_message);
     gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
 
     gtk_widget_show_all(window);
     gtk_main();
+}
 
+gboolean time_handler(GtkWidget *widget) {
+
+    g_elapsed_time++;
+
+    size_t needed_bytes = snprintf(NULL, 0 , "(%d seconds remaining) Authenticator", TIMEOUT - g_elapsed_time);
+    char* title = (char*) malloc(sizeof(char) * needed_bytes);
+    sprintf(title, "(%d seconds remaining) Authentication", TIMEOUT - g_elapsed_time);
+
+    gtk_window_set_title(GTK_WINDOW(window), title);
+
+    // If true returned, function keeps getting called every second. If false, no more called
+    if (g_elapsed_time != TIMEOUT) {
+        return TRUE;
+    } else {
+        gtk_widget_destroy(widget);
+        return FALSE;
+    }
 }
 
 void new_validation_window(char* email){
+
     GtkWidget *grid, *get_hash, *label;
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-    //g_signal_connect (window, "delete-event", G_CALLBACK (on_delete_event), NULL);
 
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
-    //gtk_window_move (GTK_WINDOW(window),30,60);
+    gtk_window_set_default_size(GTK_WINDOW(window), 500, 300);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     gtk_window_set_title(GTK_WINDOW(window), "Authentication");
 
+    g_timeout_add(1000, (GSourceFunc) time_handler, (gpointer) window);
+    time_handler(window);
 
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(window), grid);
 
-    size_t needed_bytes = snprintf(NULL, 0 , "\n    Foi enviado um email para %s.\n     Insira em baixo o código recebido.\n", email);
+    size_t needed_bytes = snprintf(NULL, 0 , "\n   Email sent to  %s.\n     Insert the received code below.\n", email);
     char* description = (char*) malloc(sizeof(char) * needed_bytes);
 
-    sprintf(description, "\n    Foi enviado um email para %s.\n    Insira em baixo o código recebido.\n", email);
+    sprintf(description, "\n    Email sent to %s.\n    Insert the received code below. \n", email);
 
     label = gtk_label_new(description);
     gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
@@ -89,7 +100,7 @@ void new_validation_window(char* email){
     gtk_grid_attach(GTK_GRID(grid), hash_field, 0, 1, 1, 1);
 
     get_hash = gtk_button_new_with_label("Confirm");
-    g_signal_connect(get_hash, "clicked", G_CALLBACK(do_get_hash), NULL);
+    g_signal_connect(get_hash, "clicked", G_CALLBACK(on_click_event), NULL);
     gtk_grid_attach(GTK_GRID(grid), get_hash, 2, 1, 1, 1);
 
     gtk_widget_show_all(window);
@@ -97,22 +108,23 @@ void new_validation_window(char* email){
 }
 
 int validate(char* real_hash_code, char* email){
-    long long unsigned tt;
-    inserted_hash_code = NULL;
+    g_elapsed_time = 0;
+    g_inserted_hash_code = NULL;
 
-    start();
     new_validation_window(email);
-    tt = stop();
 
-    // User left without entering code
-    if(inserted_hash_code == NULL) return 0;
+    int return_code;
 
-    // Exceeded timeout limit or inserted code is different from the real one
-    if(tt > TIMEOUT || strncmp(real_hash_code, inserted_hash_code, HASH_CODE_SIZE) != 0){
-        free(inserted_hash_code);
-        return 0;
+    // Test for exceeded timeout limit or inserted code different
+    // from one sent through e-mail
+    if (g_elapsed_time == TIMEOUT) {
+        return_code = TIMEOUT_EXCEEDED;
+    } else if(g_inserted_hash_code == NULL || strncmp(real_hash_code, g_inserted_hash_code, HASH_CODE_SIZE) != 0){
+        return_code = INVALID_CODE;
+    } else {
+        return_code = VALID_CODE;
     }
 
-    free(inserted_hash_code);
-    return 1;
+    free(g_inserted_hash_code);
+    return return_code;
 }
