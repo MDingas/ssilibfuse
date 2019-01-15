@@ -50,7 +50,7 @@ void new_error_window() {
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(window), grid);
 
-    label = gtk_label_new("\n\n Acesso negado.\n\n");
+    label = gtk_label_new("\n\n Access denied.\n\n");
     gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
 
     gtk_widget_show_all(window);
@@ -58,7 +58,7 @@ void new_error_window() {
 
 }
 
-void new_validation_window(){
+void new_validation_window(char* email){
     GtkWidget *grid, *get_hash, *label;
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -75,7 +75,12 @@ void new_validation_window(){
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(window), grid);
 
-    label = gtk_label_new("\n    Foi enviado um email para <inserir email aqui>.\n    Insira em baixo o código recebido.\n ");
+    size_t needed_bytes = snprintf(NULL, 0 , "\n    Foi enviado um email para %s.\n     Insira em baixo o código recebido.\n", email);
+    char* description = (char*) malloc(sizeof(char) * needed_bytes);
+
+    sprintf(description, "\n    Foi enviado um email para %s.\n    Insira em baixo o código recebido.\n", email);
+
+    label = gtk_label_new(description);
     gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
 
     hash_field = gtk_entry_new();
@@ -91,18 +96,16 @@ void new_validation_window(){
     gtk_main();
 }
 
-int validate(char* real_hash_code){
+int validate(char* real_hash_code, char* email){
     long long unsigned tt;
     inserted_hash_code = NULL;
 
     start();
-    new_validation_window();
+    new_validation_window(email);
     tt = stop();
 
     // User left without entering code
     if(inserted_hash_code == NULL) return 0;
-
-    printf("Vou comparar %s e %s\n", real_hash_code, inserted_hash_code);
 
     // Exceeded timeout limit or inserted code is different from the real one
     if(tt > TIMEOUT || strncmp(real_hash_code, inserted_hash_code, HASH_CODE_SIZE) != 0){
@@ -113,16 +116,3 @@ int validate(char* real_hash_code){
     free(inserted_hash_code);
     return 1;
 }
-
-/*
-int main(int argc, char **argv) {
-    gtk_init(NULL,NULL);
-    while(1){
-        int res = validate("diogo");
-        fprintf(stderr,"Res: %d\n",res);
-        if(res) break;
-    }
-
-    return 0;
-}
-*/
