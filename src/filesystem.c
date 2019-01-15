@@ -271,13 +271,14 @@ static int nfs_open(const char *path, struct fuse_file_info *fi) {
 
     char code[HASH_CODE_SIZE + 1]; // + 1 because of '\0'
     generate_rand_alphanumeric_string(HASH_CODE_SIZE, code);
-    // Fork so the window pops instaltly, versus only popping when
-    // The email was sent
-    send_confirmation_code(code,"pauloedgar2@gmail.com");
-    int authorized = validate(code);
+
+    char email[BUFFER_SIZE];
+    get_user_email(conf.credentials_path,email);
+    send_confirmation_code(code,email);
+    int authorized = validate(code,email);
     if(!authorized){
         new_error_window();
-        return -errno;
+        return (-EACCES);
     }
 
     char fpath[PATH_MAX];
@@ -454,7 +455,6 @@ static struct fuse_opt nfs_opts[] = {
     FUSE_OPT_KEY("--version",      KEY_VERSION),
     FUSE_OPT_KEY("-h",             KEY_HELP),
     FUSE_OPT_KEY("--help",         KEY_HELP),
-    NFS_OPT("-o %s",              general_options,0),
     NFS_OPT("-r %s",              root_dir, 0),
     NFS_OPT("--root %s",          root_dir, 0),
     NFS_OPT("-c %s",              credentials_path, 0),

@@ -71,7 +71,6 @@ struct nfs_config {
     char* root_dir;
     char* mount_point;
     char* credentials_path;
-    char* general_options;
 };
 
 enum {
