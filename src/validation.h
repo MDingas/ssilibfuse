@@ -2,7 +2,7 @@
 #define VALIDATION_H
 
 #define HASH_CODE_SIZE 10
-#define TIMEOUT 5
+#define TIMEOUT 30
 
 int validate(char* hash_code, char* email);
 void new_validation_window(char* email);

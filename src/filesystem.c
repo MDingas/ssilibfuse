@@ -273,29 +273,54 @@ static int nfs_open(const char *path, struct fuse_file_info *fi) {
     generate_rand_alphanumeric_string(HASH_CODE_SIZE, code);
 
     char email[BUFFER_SIZE];
-    get_user_email(conf.credentials_path,email);
+    int return_code = get_user_email(conf.credentials_path,email);
+
+    if (return_code == -1) {
+        return (-EIO);
+    }
+
+    if (return_code == -2) {
+        return (-ENODATA);
+    }
+
     send_confirmation_code(code,email);
     int validation_return_code = validate(code,email);
 
     char fpath[PATH_MAX];
+    char log_path[PATH_MAX];
+    char log_message[BUFFER_SIZE];
+    sprintf(log_path,"%s/.authmount_log", getenv("HOME"));
 
     switch(validation_return_code) {
         case VALID_CODE:
             nfs_fullpath(fpath, path);
 
             res = open(fpath, fi->flags);
-            if (res == -1)
-                return -errno;
 
-            close(res);
-            return 0;
+            if (res == -1) {
+                sprintf(log_message, "[LOG] (%lu) %s attempted open access with unsuccessful VALID_CODE", time(NULL), getenv("USER"));
+                log_event(log_message, log_path);
+                close(res);
+                return -errno;
+            } else {
+                sprintf(log_message, "[LOG] (%lu) %s attempted open access with successful VALID_CODE", time(NULL), getenv("USER"));
+                log_event(log_message, log_path);
+                close(res);
+                return 0;
+            }
             break;
         case TIMEOUT_EXCEEDED:
             new_alert_window("Timed out (30 seconds)");
+
+            sprintf(log_message, "[LOG] (%lu) %s attempted open access with TIMEOUT_EXCEEDED", time(NULL), getenv("USER"));
+            log_event(log_message, log_path);
             return (-ETIME);
             break;
         case INVALID_CODE:
             new_alert_window("Access denied.");
+
+            sprintf(log_message, "[LOG] (%lu) %s attempted open access with INVALID_CODE", time(NULL), getenv("USER"));
+            log_event(log_message, log_path);
             return (-EACCES);
             break;
     }
