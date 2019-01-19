@@ -1,5 +1,6 @@
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -18,27 +19,31 @@ void generate_rand_alphanumeric_string(int size, char* buffer) {
     buffer[size] = '\0';
 }
 
-int get_user_email(char* credentials,char* buffer){
-    char* username = getenv("USER");
-    char command[BUFFER_SIZE];
+int get_user_email(uid_t userid, char* credentials,char* buffer){
 
-    sprintf(command, "awk -f get_email.awk username=%s %s", username, credentials);
+    char command[300];
 
-    FILE* fp = popen(command, "r");
+    char *token;
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
 
-    if(fp == NULL ) {
-        perror("fopen");
+    FILE* fp = fopen(credentials, "r");
+
+    if (fp == NULL)
         return -1;
+
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        if (atoi(strtok(line, ":")) == userid) {
+            strcpy(buffer, strtok(NULL, ":"));
+            fclose(fp);
+            return 0;
+        }
     }
 
-    char* b = fgets(buffer, BUFFER_SIZE ,fp);
     fclose(fp);
-
-    //Email not found
-    if(b == NULL)
-        return -2;
-
-    return 0;
+    return -2;
 }
 
 int log_event(char* message, char* filepath) {
@@ -50,7 +55,7 @@ int log_event(char* message, char* filepath) {
         return -1;
     } else {
 
-        fprintf(fp, "%s", message);
+        fprintf(fp, "%s\n", message);
 
         fclose(fp);
         return 0;

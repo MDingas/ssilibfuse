@@ -267,13 +267,15 @@ static int nfs_utimens(const char *path, const struct timespec ts[2]) {
 #endif
 
 static int nfs_open(const char *path, struct fuse_file_info *fi) {
+    printf("open chamado\n");
+
     int res;
 
     char code[HASH_CODE_SIZE + 1]; // + 1 because of '\0'
     generate_rand_alphanumeric_string(HASH_CODE_SIZE, code);
 
     char email[BUFFER_SIZE];
-    int return_code = get_user_email(conf.credentials_path,email);
+    int return_code = get_user_email(fuse_get_context()->uid, conf.credentials_path,email);
 
     if (return_code == -1) {
         return (-EIO);
@@ -298,12 +300,12 @@ static int nfs_open(const char *path, struct fuse_file_info *fi) {
             res = open(fpath, fi->flags);
 
             if (res == -1) {
-                sprintf(log_message, "[LOG] (%lu) %s attempted open access with unsuccessful VALID_CODE", time(NULL), getenv("USER"));
+                sprintf(log_message, "[LOG] (%lu) %d attempted open access with unsuccessful VALID_CODE", time(NULL), fuse_get_context()->uid);
                 log_event(log_message, log_path);
                 close(res);
                 return -errno;
             } else {
-                sprintf(log_message, "[LOG] (%lu) %s attempted open access with successful VALID_CODE", time(NULL), getenv("USER"));
+                sprintf(log_message, "[LOG] (%lu) %d attempted open access with successful VALID_CODE", time(NULL), fuse_get_context()->uid );
                 log_event(log_message, log_path);
                 close(res);
                 return 0;
@@ -312,14 +314,14 @@ static int nfs_open(const char *path, struct fuse_file_info *fi) {
         case TIMEOUT_EXCEEDED:
             new_alert_window("Timed out (30 seconds)");
 
-            sprintf(log_message, "[LOG] (%lu) %s attempted open access with TIMEOUT_EXCEEDED", time(NULL), getenv("USER"));
+            sprintf(log_message, "[LOG] (%lu) %d attempted open access with TIMEOUT_EXCEEDED", time(NULL), fuse_get_context()->uid);
             log_event(log_message, log_path);
             return (-ETIME);
             break;
         case INVALID_CODE:
             new_alert_window("Access denied.");
 
-            sprintf(log_message, "[LOG] (%lu) %s attempted open access with INVALID_CODE", time(NULL), getenv("USER"));
+            sprintf(log_message, "[LOG] (%lu) %d attempted open access with INVALID_CODE", time(NULL), fuse_get_context()->uid);
             log_event(log_message, log_path);
             return (-EACCES);
             break;
@@ -523,16 +525,22 @@ void nfs_validate_options(struct nfs_config* conf) {
         sprintf(filename,"%s/.authmount_credentials", getenv("HOME"));
 
         FILE *f = fopen(filename, "w");
-        fprintf(f,"%s:%s\n", getenv("USER") , line);
+        fprintf(f,"%d:%s\n", getuid() , line);
         fclose(f);
 
-        conf->credentials_path = "authmount_credentials";
+        conf->credentials_path = strdup(filename);
 
         printf("Credentials saved in ~/.authmount_credentials\n");
+    } else {
+        conf->credentials_path = realpath(conf->credentials_path, NULL);
     }
 }
 
 int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        fprintf(stderr, "Invalid arguments. Try authmounter --help\n");
+        exit(0);
+    }
     gtk_init(NULL,NULL);
 
     nfs_validate_non_root_usage();

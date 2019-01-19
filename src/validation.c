@@ -89,10 +89,10 @@ void new_validation_window(char* email){
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(g_window), grid);
 
-    size_t needed_bytes = snprintf(NULL, 0 , "\n   Email sent to  %s.\n     Insert the received code below.\n", email);
+    size_t needed_bytes = snprintf(NULL, 0 , "\n   Email sent to  %s \n     Insert the received code below.\n", email);
     char* description = (char*) malloc(sizeof(char) * needed_bytes);
 
-    sprintf(description, "\n    Email sent to %s.\n    Insert the received code below. \n", email);
+    sprintf(description, "\n    Email sent to %s \n    Insert the received code below. \n", email);
 
     label = gtk_label_new(description);
     gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
